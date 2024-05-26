@@ -54,16 +54,28 @@ namespace BitcrackRandomiser
                 return Task.FromResult(0);
             }
 
-            // Get random HEX value from API
-            string hex = Requests.GetHex(settings, gpuIndex).Result;
+            string hex = "";
             string targetAddress = Helper.GetTargetAddress(settings.TargetPuzzle);
-
-            // Cannot get HEX value
+            int maxRetries = 5;
+            int retries = 0;
+        
+            while (hex == "" && retries < maxRetries)
+            {
+                // Get random HEX value from API
+                hex = Requests.GetHex(settings, gpuIndex).Result;
+        
+                // Cannot get HEX value
+                if (hex == "")
+                {
+                    Helper.WriteLine("Database connection error. Please wait...", MessageType.error);
+                    Thread.Sleep(5000);
+                    retries++;
+                }
+            }
+        
             if (hex == "")
             {
-                Helper.WriteLine("Database connection error. Please wait...", MessageType.error);
-                Thread.Sleep(5000);
-                Scan(settings, gpuIndex);
+                Helper.WriteLine("Failed to get HEX value after multiple attempts.", MessageType.error);
                 return Task.FromResult(0);
             }
 
@@ -267,16 +279,14 @@ namespace BitcrackRandomiser
             {
                 // Send notification each key scanned
                 Share.Send(ResultType.rangeScanned, settings, hex);
-
+        
                 // Flag HEX as used
                 Flagger.Flag(settings, hex, gpuIndex, proofKeys[gpuIndex], gpuNames[gpuIndex]);
-
-                // Wait and restart
+        
+                // Reset proof keys and scan completed flag
                 proofKeys[gpuIndex] = "";
                 isProofKeys[gpuIndex] = false;
-                Thread.Sleep(5000);
                 scanCompleted[gpuIndex] = false;
-                Scan(settings, gpuIndex);
             }
         }
 
