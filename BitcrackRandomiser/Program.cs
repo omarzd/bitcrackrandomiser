@@ -57,25 +57,21 @@ namespace BitcrackRandomiser
                     .Where(s => !string.IsNullOrWhiteSpace(s))
                     .Distinct().ToList();
 
-            // Run
-            Helper.WriteLine("Please wait while app is starting...", MessageType.normal, true);
-            if (appSettings.AppType == AppType.bitcrack)
+            // Run in a loop
+            for (int i = 0; i < appSettings.GPUCount; i++)
             {
-                Parallel.For(0, appSettings.GPUCount, i =>
+                int gpuIndex = i;  // Capture the current value of i
+                Task.Run(async () =>
                 {
-                    Randomiser.Scan(appSettings, i);
+                    while (true)
+                    {
+                        await Randomiser.Scan(appSettings, gpuIndex);
+                        Thread.Sleep(5000);  // Add delay between scans if needed
+                    }
                 });
             }
-            else if(appSettings.AppType == AppType.vanitysearch && appSettings.GPUSeperatedRange)
-            {
-                Parallel.For(0, appSettings.GPUCount, i =>
-                {
-                    Randomiser.Scan(appSettings, i);
-                });
-            }
-            else if (appSettings.AppType == AppType.vanitysearch || appSettings.AppType == AppType.cpu)
-                Randomiser.Scan(appSettings, 0);
-
+        
+            // Prevent the application from exiting
             while (true) Console.ReadLine();
         }
     }
